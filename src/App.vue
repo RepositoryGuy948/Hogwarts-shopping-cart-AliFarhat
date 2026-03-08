@@ -3,7 +3,11 @@
     <h1>{{ username }}'s Shopping Cart</h1>
     <div class="cart-container">
       <div class="cart-list">
-        <div class="cart-list-item" v-for="(item, index) in shoppingCartItems" :key="item.id">
+        <div
+          class="cart-list-item"
+          v-for="item in shoppingCartItems"
+          :key="item.id"
+        >
           <img
             :src="item.image"
             :alt="item.productName"
@@ -13,10 +17,10 @@
             <div class="item-details">
               <h2>{{ item.productName }}</h2>
               <p class="price">${{ item.price }}</p>
-              <p v-if="item.isInStock" class="in-stock-status">
+              <p class="in-stock-status" v-if="item.isInStock">
                 <i class="fa-solid fa-check"></i> In stock
               </p>
-              <p v-else class="on-backorder-status">
+              <p class="on-backorder-status" v-else>
                 <i class="fa-solid fa-hourglass-half"></i> On backorder
               </p>
             </div>
@@ -31,9 +35,8 @@
                 <input
                   type="text"
                   class="quantity-input"
-                  :value="item.quantity"
+                  v-model.number="item.quantity"
                   aria-label="quantity"
-                  @blur="changeQuantity(item.id, $event)"
                 />
                 <button
                   class="quantity-change-button"
@@ -42,7 +45,9 @@
                   +
                 </button>
               </div>
-              <button class="remove-item" @click="removeItem(item.id)">✕</button>
+              <button class="remove-item" @click="removeItem(item.id)">
+                ✕
+              </button>
             </div>
           </div>
         </div>
@@ -58,20 +63,20 @@
         <div :class="{ 'hide-order-details': hideDetails }">
           <div class="summary-item">
             <span>Subtotal</span>
-            <span>$13900</span>
+            <span>${{ subtotal }}</span>
           </div>
           <div class="summary-item">
             <span>Shipping estimate</span>
-            <span>$100</span>
+            <span>${{ shippingEstimate }}</span>
           </div>
           <div class="summary-item">
             <span>Tax estimate</span>
-            <span>$1112</span>
+            <span>${{ taxEstimate }}</span>
           </div>
         </div>
         <div class="summary-total">
           <strong>Order total</strong>
-          <strong>$15112</strong>
+          <strong>${{ total }}</strong>
         </div>
         <button class="checkout-button">Checkout</button>
       </div>
@@ -80,7 +85,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 let username = 'Harry'
 let shoppingCartItems = ref([
@@ -98,7 +103,7 @@ let shoppingCartItems = ref([
     price: 600,
     isInStock: true,
     quantity: 2,
-    image: 'src/assets/img/GoldenSnitch.png'
+    image: ' src/assets/img/GoldenSnitch.png'
   },
   {
     id: 3,
@@ -144,23 +149,44 @@ function increaseOne(id) {
   })
 }
 
-function changeQuantity(id, event) {
-  shoppingCartItems.value.some((item) => {
-    if (item.id == id) {
-      item.quantity = parseInt(event.target.value)
-    }
-  })
-}
-
 function removeItem(id) {
-  let index = shoppingCartItems.value.findIndex((item) => item.id == id)
-  if (index !== -1) {
-    shoppingCartItems.value.splice(index, 1)
-  }
+  // Step 1: find the index of the item to be deleted
+  let index = shoppingCartItems.value.findIndex((item) => {
+    return item.id == id
+  })
+  // Step 2: delete this item from the list
+  shoppingCartItems.value.splice(index, 1)
 }
+let subtotal = computed(() =>
+  shoppingCartItems.value.reduce(
+    (acc, item) => acc + item.price * item.quantity,
+    0
+  )
+)
+
+let shippingEstimate = computed(() => (subtotal.value > 10000 ? 100 : 50))
+
+let taxEstimate = computed(() => subtotal.value * 0.08)
+
+let total = computed(
+  () => subtotal.value + shippingEstimate.value + taxEstimate.value
+)
+
+// Automatically save to localStorage whenever any part of shoppingCartItems changes
+watch(
+  shoppingCartItems,
+  () => {
+    localStorage.setItem(
+      'hogwartsShoppingCart',
+      JSON.stringify(shoppingCartItems.value)
+    )
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>
+/* Styles for the shopping cart */
 .shopping-cart {
   font-family: 'Arial', sans-serif;
   background-color: #f8f8f8;
@@ -168,12 +194,14 @@ function removeItem(id) {
   padding: 0;
 }
 
+/* Styles for the cart title */
 h1 {
   padding: 20px;
   max-width: 1200px;
   margin: auto;
 }
 
+/* Styles for the cart list and order summary */
 .cart-container {
   display: flex;
   align-items: flex-start;
@@ -194,6 +222,7 @@ h1 {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Styles for the cart list item */
 .cart-list-item {
   display: flex;
   align-items: center;
@@ -243,6 +272,7 @@ h1 {
   border: 1px solid #c1c1c1;
   border-radius: 8px;
   overflow: hidden;
+  /* Ensures the children do not break the rounded corners */
 }
 
 .quantity-change-button {
@@ -284,6 +314,7 @@ h1 {
   background-color: #f2f2f2;
 }
 
+/* Styles for the order summary */
 .toggle-details-button {
   background-color: #f1f1f1;
   color: #333;
@@ -296,6 +327,7 @@ h1 {
 
 .hide-order-details {
   display: none;
+  /* Hide details by default */
 }
 
 .summary-item {
@@ -323,6 +355,7 @@ h1 {
   cursor: pointer;
   margin-top: 10px;
   transition: all 0.2s;
+  /* smooth transition in and out */
 }
 
 .checkout-button:hover {
